@@ -16,11 +16,13 @@
              [clojurewerkz.quartzite.scheduler :as qs])  
   (:gen-class))
 
-(def tdm-publishers (atom []))
+; Map of {feature name => publishers that participate + data}
+(def features-and-publishers (atom {}))
 
 ; List of feature specs. 
 (def features
   [{:name :tdm
+    :fullname "Text and Data Mining"
     :sort-by (fn [publisher] (max
                                (+ (-> publisher :coverage :licenses-backfile) (-> publisher :coverage :resource-links-backfile))
                                (+ (-> publisher :coverage :licenses-current) (-> publisher :coverage :resource-links-current))))
@@ -32,7 +34,39 @@
                 [[:coverage :resource-links-backfile] "Full text resource links for back-files"]]
              ["Current deposits"
                 [[:coverage :licenses-current] "Licenses for current content"]
-                [[:coverage :resource-links-current] "Full text resource links for current content"]]]}])
+                [[:coverage :resource-links-current] "Full text resource links for current content"]]]}
+   
+   {:name :orcid
+    :fullname "ORCID Author Deposits"
+    :sort-by (fn [publisher] (max
+                               (-> publisher :coverage :orcids-backfile)
+                               (-> publisher :coverage :orcids-current)))
+    
+    :filter (fn [publisher] (let [flags (:flags publisher)]
+                     (or (:deposits-orcids-backfile flags)
+                         (:deposits-orcids-current flags))))
+    
+    :fields [["Back-deposits"
+                [[:coverage :orcids-backfile] "ORCID Author Deposits"]]
+             ["Current deposits"
+                [[:coverage :orcids-current] "ORCID Author Deposits"]]]}
+
+   {:name :funding
+    :fullname "Funding Information"
+    :sort-by (fn [publisher] (max
+                               (-> publisher :coverage :funders-backfile)
+                               (-> publisher :coverage :funders-current)))
+    
+    :filter (fn [publisher] (let [flags (:flags publisher)]
+                     (or (:deposits-funders-backfile flags)
+                         (:deposits-funders-current flags))))
+    
+    :fields [["Back-deposits"
+                [[:coverage :orcids-backfile] "Funding Information Deposits"]]
+             ["Current deposits"
+                [[:coverage :orcids-current] "Funding Information Deposits"]]]}])
+
+(def features-by-name (apply merge (map (fn [feature] {(:name feature) feature}) features)))
 
 (def api-endpoint "http://api.crossref.org/members")
 (def api-page-size 500)
@@ -68,8 +102,10 @@
   "Filter a list of Publishers for a given feature."
   [feature publishers]
   (let [filtered (filter (:filter feature) publishers)
-        sort-f (:sort-by feature)
-        sorted (reverse (sort-by sort-f filtered))]
+        ; sort-f (:sort-by feature)
+        ; sorted (reverse (sort-by sort-f filtered))        
+        sort-f #(:primary-name %)
+        sorted (sort-by sort-f filtered)]
     sorted))
 
 (defn process-publisher-feature
@@ -87,10 +123,44 @@
    :metadata publisher
    :feature (process-publisher-feature feature publisher)})
 
-(defn tdm-handler [request]
-  (let [tdm-publishers-decorated @tdm-publishers]
+(defn decorate-publishers-for-all-features
+  "For a list of publishers, return a map of {feature name => publishers for feature}"
+  [publishers]
+  (apply merge 
+  (map 
+    (fn [feature]
+      (let [feature-name (:name feature)
+            ; Filter and sort publishers who participate in this feature.
+            publishers-filtered (filter-publishers-for-feature feature publishers)
+            
+            ; Add data for the feature and sort.
+            publishers-decorated (map #(decorate-publisher-feature feature %) publishers-filtered)]
+        
+        {feature-name publishers-decorated}))
+    features)))
+
+
+(defjob UpdateJob
+  [ctx]
+  (prn "Update job")
+    (let [publishers (get-publishers)
+          decorated-publishers-for-all-features (decorate-publishers-for-all-features publishers)]
+  (reset! features-and-publishers decorated-publishers-for-all-features)))
+
+(defn features-handler []
+  (html [:h1 "Features"]
+        (for [feature features]
+          (list
+            [:h2 [:a {:href (str "/features/" (name (:name feature)))} (:fullname feature)]] ))))
+
+(defn feature-handler [feature-name]
+  (let [feature-name (keyword feature-name)
+        feature (feature-name features-by-name)
+        publishers-decorated @features-and-publishers
+        publisher-for-feature (get publishers-decorated feature-name)]
     (html
-      (for [publisher tdm-publishers-decorated]
+      [:h1 (:fullname feature)]
+      (for [publisher publisher-for-feature]
         (list 
             [:h2 (:name publisher)]
             [:table
@@ -100,19 +170,12 @@
                             (list (for [[label value] label-value-pairs] (list [:td label] [:td (stars value)]))))]))])))))
 
 (defroutes the-routes
-  (GET "/feature/tdm" request tdm-handler))
+  (GET "/features" [] (features-handler))
+  (GET ["/features/:feature" :feature #".*"] [feature] (feature-handler feature)))
 
 (def app
   (-> the-routes
       handler/site))
-
-(defjob UpdateJob
-  [ctx]
-  (prn "Update job")
-    (let [publishers (get-publishers)
-        tdm-publishers-filtered (filter-publishers-for-feature (first features) publishers)
-        tdm-publishers-decorated (map #(decorate-publisher-feature (first features) %) tdm-publishers-filtered)]
-  (reset! tdm-publishers tdm-publishers-decorated)))
 
 (defn -main
   [& args]

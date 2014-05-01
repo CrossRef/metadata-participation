@@ -12,8 +12,10 @@
                  [lein-ring "0.8.10"]
                  [javax.servlet/servlet-api "2.5"]
                  [compojure "1.1.6"]
-[http-kit "2.1.10"]
-[clojurewerkz/quartzite "1.1.0"]
+                 [http-kit "2.1.10"]
+                 [clojurewerkz/quartzite "1.1.0"]
+                 [org.slf4j/slf4j-log4j12 "1.7.5"]
+                 
                  ]
   :main ^:skip-aot metadata-participation.core
   :target-path "target/%s"
