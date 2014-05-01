@@ -153,14 +153,22 @@
           (list
             [:h2 [:a {:href (str "/features/" (name (:name feature)))} (:fullname feature)]] ))))
 
+(defn template-stars-html
+  [stars]
+  (html (cond
+    (= stars :three-stars) [:span "★★★"]
+    (= stars :two-stars) [:span "★★☆"] 
+    (= stars :one-star) [:span "★☆☆"]
+    :else [:span "☆☆☆"])))
+
 (defn member-table-html
   [member-feature]
   (html [:table
              (for [column (:feature member-feature)]
                (list [:tr [:td (first column)]
                           (for [label-value-pairs (rest column)]
-                            (list (for [[label value] label-value-pairs] (list [:td label] [:td (stars value)]))))]))])
-  )
+                            (list (for [[label value] label-value-pairs] (list [:td label] [:td (template-stars-html (stars value))]))))]))]))
+︎
 
 (defn feature-handler [feature-name]
   (let [feature-name (keyword feature-name)
@@ -185,7 +193,9 @@
 
         (html [:h1 (:primary-name publisher-data)]
           (for [publisher-feature publisher-per-feature]
-              (member-table-html publisher-feature)
+              (list 
+                [:h2 (-> publisher-feature :feature :fullname)]
+                (member-table-html publisher-feature))
     )
   )))
 
