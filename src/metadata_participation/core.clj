@@ -153,6 +153,15 @@
           (list
             [:h2 [:a {:href (str "/features/" (name (:name feature)))} (:fullname feature)]] ))))
 
+(defn member-table-html
+  [member-feature]
+  (html [:table
+             (for [column (:feature member-feature)]
+               (list [:tr [:td (first column)]
+                          (for [label-value-pairs (rest column)]
+                            (list (for [[label value] label-value-pairs] (list [:td label] [:td (stars value)]))))]))])
+  )
+
 (defn feature-handler [feature-name]
   (let [feature-name (keyword feature-name)
         feature (feature-name features-by-name)
@@ -162,16 +171,28 @@
       [:h1 (:fullname feature)]
       (for [publisher publisher-for-feature]
         (list 
-            [:h2 (:name publisher)]
-            [:table
-             (for [column (:feature publisher)]
-               (list [:tr [:td (first column)]
-                          (for [label-value-pairs (rest column)]
-                            (list (for [[label value] label-value-pairs] (list [:td label] [:td (stars value)]))))]))])))))
+            [:h2 [:a {:href (str "/member/" (-> publisher :metadata :id))} (:name publisher)]]            
+            (member-table-html publisher)
+            )))))
+
+(defn member-handler [member-id]
+  (let [id (Integer/parseInt member-id)
+        response (client/get (str api-endpoint "/" member-id))
+        response-json (json/read-str (:body response) :key-fn keyword)
+        publisher-data (-> response-json :message)
+        publisher-per-feature (map #(decorate-publisher-feature % publisher-data) features)
+        ]
+
+        (html [:h1 (:primary-name publisher-data)]
+          (for [publisher-feature publisher-per-feature]
+              (member-table-html publisher-feature)
+    )
+  )))
 
 (defroutes the-routes
   (GET "/features" [] (features-handler))
-  (GET ["/features/:feature" :feature #".*"] [feature] (feature-handler feature)))
+  (GET ["/features/:feature" :feature #".*"] [feature] (feature-handler feature))
+  (GET ["/member/:id" :id #"\d*"] [id] (member-handler id)))
 
 (def app
   (-> the-routes
