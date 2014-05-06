@@ -72,9 +72,9 @@
                          (:deposits-funders-current flags))))
     
     :fields [["&#8612; Back file deposits"
-                [[:coverage :orcids-backfile] "Funding Information"]]
+                [[:coverage :funders-backfile] "Funding Information"]]
              ["&#8614; Current deposits"
-                [[:coverage :orcids-current] "Funding Information"]]]}])
+                [[:coverage :funders-backfile] "Funding Information"]]]}])
 
 (def features-by-name (apply merge (map (fn [feature] {(:name feature) feature}) features)))
 
