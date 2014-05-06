@@ -1,0 +1,14 @@
+<VirtualHost *:80>
+    ServerName            participation.labs.crossref.org
+    ServerAdmin           jwass@crossref.org
+    RewriteEngine on
+    ProxyRequests Off
+
+    ProxyPass / http://localhost:9099/
+    ProxyPassReverse / http://localhost:9099/
+
+    AllowEncodedSlashes   On
+    UseCanonicalName      Off
+    ErrorLog         /var/log/apache2/participation-error_log
+    TransferLog      /var/log/apache2/participation-access_log
+</VirtualHost>

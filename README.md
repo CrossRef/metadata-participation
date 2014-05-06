@@ -1,4 +1,4 @@
-# CrossRef Metadata Participation
+]# CrossRef Metadata Participation
 
 A dashboard to show which publishers deposit which metadata.
 
@@ -8,11 +8,11 @@ Copy `config.edn.example` to `config.edn`. Make relevant changes. For example, i
 
 Then, from the root directory:
 
-  lein run
+   lein run
 
 or 
 
-  lein daemon start metadata-participation
+   lein daemon start metadata-participation
 
 ## License
 
