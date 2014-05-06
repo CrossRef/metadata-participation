@@ -4,6 +4,7 @@
   (:require [clojure.data.json :as json])
   (:require [hiccup.core :refer [html]])
   (:require [ring.util.response :refer [redirect]])
+  (:require [clojure.tools.reader.edn :as edn])
  
   (:require [compojure.handler :as handler]
             [compojure.route :as route]
@@ -20,6 +21,9 @@
 
 ; Map of {feature name => publishers that participate + data}
 (def features-and-publishers (atom {}))
+
+; This is set by the main function.
+(def config (atom {}))
 
 ; List of feature specs. 
 (def features
@@ -147,16 +151,15 @@
 
 (defjob UpdateJob
   [ctx]
-  (prn "Update job")
     (let [publishers (get-publishers)
           decorated-publishers-for-all-features (decorate-publishers-for-all-features publishers)]
   (reset! features-and-publishers decorated-publishers-for-all-features)))
 
 (defn features-handler []
-  (html (templates/features
+  (html (templates/features (:url-prefix @config)
         (for [feature features]
           (list
-            [:h2 [:a {:href (str "/features/" (name (:name feature)))} (:fullname feature)]] [:p (:description feature)] )))))
+            [:h2 [:a {:href (str (:url-prefix @config) "/features/" (name (:name feature)))} (:fullname feature)]] [:p (:description feature)] )))))
 
 (defn template-stars-html 
   [stars]
@@ -181,12 +184,12 @@
         publishers-decorated @features-and-publishers
         publisher-for-feature (get publishers-decorated feature-name)]
           
-      (html (templates/feature
+      (html (templates/feature (:url-prefix @config)
               (:fullname feature)
               (:description feature)
               (for [publisher publisher-for-feature]
                 (list 
-                  [:h2 [:a {:href (str "/member/" (-> publisher :metadata :id))} (:name publisher)]]            
+                  [:h2 [:a {:href (str (:url-prefix @config) "/member/" (-> publisher :metadata :id))} (:name publisher)]]            
                   (member-table-html publisher)))))))
       
 
@@ -198,7 +201,7 @@
         publisher-data (-> response-json :message)
         publisher-per-feature (map #(decorate-publisher-feature % publisher-data) features)]
 
-        (html (templates/member (:primary-name publisher-data)
+        (html (templates/member (:url-prefix @config) (:primary-name publisher-data)
           (for [publisher-feature publisher-per-feature]
            (list 
              [:h2 (-> publisher-feature :feature :fullname)]
@@ -217,15 +220,18 @@
 
 (defn -main
   [& args]
-  (qs/initialize)
-  (qs/start)
-  
-  (let [job (qj/build
-             (qj/of-type UpdateJob)
-             (qj/with-identity (qj/key "jobs.update")))
-        trigger (qt/build
-                 (qt/with-identity (qt/key "triggers.update"))
-                 (qt/start-now)
-                 (qt/with-schedule (cal/schedule (cal/with-interval-in-minutes 20))))]
-    (qs/schedule job trigger))
-    (hs/run-server app {:port 9876}))
+    (let [the-config (edn/read-string (slurp "config.edn"))]
+      (reset! config the-config)
+    
+      (qs/initialize)
+      (qs/start)
+      
+      (let [job (qj/build
+                 (qj/of-type UpdateJob)
+                 (qj/with-identity (qj/key "jobs.update")))
+            trigger (qt/build
+                     (qt/with-identity (qt/key "triggers.update"))
+                     (qt/start-now)
+                     (qt/with-schedule (cal/schedule (cal/with-interval-in-minutes 20))))]
+        (qs/schedule job trigger))
+        (hs/run-server app {:port (:port @config)})))
