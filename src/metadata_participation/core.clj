@@ -26,6 +26,8 @@
 ; This is set by the main function.
 (def config (atom {}))
 
+(def exclude-members #{2431})
+
 ; List of feature specs. 
 (def features
   [{:name :tdm
@@ -74,7 +76,7 @@
     :fields [["&#8612; Back file deposits"
                 [[:coverage :funders-backfile] "Funding Information"]]
              ["&#8614; Current deposits"
-                [[:coverage :funders-backfile] "Funding Information"]]]}])
+                [[:coverage :funders-current] "Funding Information"]]]}])
 
 (def features-by-name (apply merge (map (fn [feature] {(:name feature) feature}) features)))
 
@@ -97,7 +99,8 @@
 (defn get-publisher-page [page]
   (let [response (client/get (str api-endpoint "?" (client/generate-query-string {:rows api-page-size :offset (* api-page-size page)})))
         response-json (json/read-str (:body response) :key-fn keyword)
-        items (-> response-json :message :items)]
+        items (-> response-json :message :items)
+        items (remove #(contains? exclude-members (:id %)) items)]
   items))
 
 (defn get-publishers []
