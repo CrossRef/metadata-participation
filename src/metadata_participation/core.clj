@@ -1,7 +1,9 @@
 (ns metadata-participation.core
+  (:require [metadata-participation.templates :as templates])
   (:require [clj-http.client :as client])
   (:require [clojure.data.json :as json])
   (:require [hiccup.core :refer [html]])
+  (:require [ring.util.response :refer [redirect]])
  
   (:require [compojure.handler :as handler]
             [compojure.route :as route]
@@ -23,6 +25,7 @@
 (def features
   [{:name :tdm
     :fullname "Text and Data Mining"
+    :description "When publishers deposit full-text links and license information researchers can access the full-text of publications to perform Text and Data Mining."
     :sort-by (fn [publisher] (max
                                (+ (-> publisher :coverage :licenses-backfile) (-> publisher :coverage :resource-links-backfile))
                                (+ (-> publisher :coverage :licenses-current) (-> publisher :coverage :resource-links-current))))
@@ -38,6 +41,7 @@
    
    {:name :orcid
     :fullname "ORCID Author Deposits"
+    :description "ORCID IDs identify authors of publications."
     :sort-by (fn [publisher] (max
                                (-> publisher :coverage :orcids-backfile)
                                (-> publisher :coverage :orcids-current)))
@@ -53,6 +57,7 @@
 
    {:name :funding
     :fullname "Funding Information"
+    :description "Publishers can deposit Funding Information so people can see which funding bodies paid for the research behind a publication."
     :sort-by (fn [publisher] (max
                                (-> publisher :coverage :funders-backfile)
                                (-> publisher :coverage :funders-current)))
@@ -71,8 +76,7 @@
 (def api-endpoint "http://api.crossref.org/members")
 (def api-page-size 500)
 
-(defn stars [value]
-  (cond
+(defn stars [value]  (cond
     (> value 0.8) :three-stars
     (> value 0.4) :two-stars
     (> value 0) :one-star
@@ -121,7 +125,8 @@
 (defn decorate-publisher-feature [feature publisher]
   {:name (:primary-name publisher)
    :metadata publisher
-   :feature (process-publisher-feature feature publisher)})
+   :feature-data (process-publisher-feature feature publisher)
+   :feature feature})
 
 (defn decorate-publishers-for-all-features
   "For a list of publishers, return a map of {feature name => publishers for feature}"
@@ -148,61 +153,63 @@
   (reset! features-and-publishers decorated-publishers-for-all-features)))
 
 (defn features-handler []
-  (html [:h1 "Features"]
+  (html (templates/features
         (for [feature features]
           (list
-            [:h2 [:a {:href (str "/features/" (name (:name feature)))} (:fullname feature)]] ))))
+            [:h2 [:a {:href (str "/features/" (name (:name feature)))} (:fullname feature)]] [:p (:description feature)] )))))
 
-(defn template-stars-html
+(defn template-stars-html 
   [stars]
   (html (cond
-    (= stars :three-stars) [:span "★★★"]
-    (= stars :two-stars) [:span "★★☆"] 
-    (= stars :one-star) [:span "★☆☆"]
-    :else [:span "☆☆☆"])))
+    (= stars :three-stars) [:span "&#x2605;&#x2605;&#x2605;"]
+    (= stars :two-stars) [:span "&#x2605;&#x2605;&#x2606;"] 
+    (= stars :one-star) [:span "&#x2605;&#x2606;&#x2606;"]
+    :else [:span "&#x2606;&#x2606;&#x2606;"]
+    )))
 
 (defn member-table-html
   [member-feature]
   (html [:table
-             (for [column (:feature member-feature)]
-               (list [:tr [:td (first column)]
+             (for [column (:feature-data member-feature)]
+               (list [:tr [:td {:class :feature-time-period} (first column)]
                           (for [label-value-pairs (rest column)]
-                            (list (for [[label value] label-value-pairs] (list [:td label] [:td (template-stars-html (stars value))]))))]))]))
-︎
+                            (list (for [[label value] label-value-pairs] (list [:td {:class :feature-label} label] [:td {:class :feature-value} (template-stars-html (stars value))]))))]))]))
 
 (defn feature-handler [feature-name]
   (let [feature-name (keyword feature-name)
         feature (feature-name features-by-name)
         publishers-decorated @features-and-publishers
         publisher-for-feature (get publishers-decorated feature-name)]
-    (html
-      [:h1 (:fullname feature)]
-      (for [publisher publisher-for-feature]
-        (list 
-            [:h2 [:a {:href (str "/member/" (-> publisher :metadata :id))} (:name publisher)]]            
-            (member-table-html publisher)
-            )))))
+          
+      (html (templates/feature
+              (:fullname feature)
+              (:description feature)
+              (for [publisher publisher-for-feature]
+                (list 
+                  [:h2 [:a {:href (str "/member/" (-> publisher :metadata :id))} (:name publisher)]]            
+                  (member-table-html publisher)))))))
+      
+
 
 (defn member-handler [member-id]
   (let [id (Integer/parseInt member-id)
         response (client/get (str api-endpoint "/" member-id))
         response-json (json/read-str (:body response) :key-fn keyword)
         publisher-data (-> response-json :message)
-        publisher-per-feature (map #(decorate-publisher-feature % publisher-data) features)
-        ]
+        publisher-per-feature (map #(decorate-publisher-feature % publisher-data) features)]
 
-        (html [:h1 (:primary-name publisher-data)]
+        (html (templates/member (:primary-name publisher-data)
           (for [publisher-feature publisher-per-feature]
-              (list 
-                [:h2 (-> publisher-feature :feature :fullname)]
-                (member-table-html publisher-feature))
-    )
-  )))
+           (list 
+             [:h2 (-> publisher-feature :feature :fullname)]
+               (member-table-html publisher-feature)))))))
 
 (defroutes the-routes
+  (GET "/" [] (redirect "/features"))
   (GET "/features" [] (features-handler))
   (GET ["/features/:feature" :feature #".*"] [feature] (feature-handler feature))
-  (GET ["/member/:id" :id #"\d*"] [id] (member-handler id)))
+  (GET ["/member/:id" :id #"\d*"] [id] (member-handler id))
+  (route/resources "/"))
 
 (def app
   (-> the-routes

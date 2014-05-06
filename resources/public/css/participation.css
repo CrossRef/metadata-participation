@@ -1,0 +1,18 @@
+html {
+
+}
+
+.feature-time-period {
+    font-size: 0.9em;
+    width: 150px;
+}
+
+.feature-label {
+    font-size: 1.1em;
+    width: 300px;
+}
+
+.feature-value {
+    font-size: 1.5em;
+    width: 80px;
+}
