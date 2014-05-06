@@ -10,7 +10,6 @@
         [:meta {:name "description" :content "Landing page for CrossRef Apps"} ]
         [:title "CrossRef Apps"]
         [:link {:href "/css/bootstrap.min.css" :rel "stylesheet"}]
-        [:link {:href "/css/jumbotron-narrow.css" :rel "stylesheet"}]
         [:link {:href "/css/participation.css" :rel "stylesheet"}]
       ]
 

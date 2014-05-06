@@ -32,12 +32,12 @@
     :filter (fn [publisher] (let [flags (:flags publisher)]
                      (or (and (:deposits-licenses-backfile flags) (:deposits-resource-links-backfile flags))
                          (and (:deposits-licenses-current flags) (:deposits-resource-links-current flags)))))
-    :fields [["Back-deposits"
-                [[:coverage :licenses-backfile] "Licenses for back-files"]
-                [[:coverage :resource-links-backfile] "Full text resource links for back-files"]]
-             ["Current deposits"
-                [[:coverage :licenses-current] "Licenses for current content"]
-                [[:coverage :resource-links-current] "Full text resource links for current content"]]]}
+    :fields [["&#8612; Back-deposits"
+                [[:coverage :licenses-backfile] "Licenses"]
+                [[:coverage :resource-links-backfile] "Full text links"]]
+             ["&#8614; Current deposits"
+                [[:coverage :licenses-current] "Licenses"]
+                [[:coverage :resource-links-current] "Full text links"]]]}
    
    {:name :orcid
     :fullname "ORCID Author Deposits"
@@ -50,9 +50,9 @@
                      (or (:deposits-orcids-backfile flags)
                          (:deposits-orcids-current flags))))
     
-    :fields [["Back-deposits"
+    :fields [["&#8612; Back-deposits"
                 [[:coverage :orcids-backfile] "ORCID Author Deposits"]]
-             ["Current deposits"
+             ["&#8614; Current deposits"
                 [[:coverage :orcids-current] "ORCID Author Deposits"]]]}
 
    {:name :funding
@@ -66,10 +66,10 @@
                      (or (:deposits-funders-backfile flags)
                          (:deposits-funders-current flags))))
     
-    :fields [["Back-deposits"
-                [[:coverage :orcids-backfile] "Funding Information Deposits"]]
-             ["Current deposits"
-                [[:coverage :orcids-current] "Funding Information Deposits"]]]}])
+    :fields [["&#8612; Back-deposits"
+                [[:coverage :orcids-backfile] "Funding Information"]]
+             ["&#8614; Current deposits"
+                [[:coverage :orcids-current] "Funding Information"]]]}])
 
 (def features-by-name (apply merge (map (fn [feature] {(:name feature) feature}) features)))
 
