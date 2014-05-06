@@ -3,6 +3,7 @@
   (:require [clj-http.client :as client])
   (:require [clojure.data.json :as json])
   (:require [hiccup.core :refer [html]])
+  (:require [hiccup.page :refer [html5]])
   (:require [ring.util.response :refer [redirect]])
   (:require [clojure.tools.reader.edn :as edn])
  
@@ -36,7 +37,7 @@
     :filter (fn [publisher] (let [flags (:flags publisher)]
                      (or (and (:deposits-licenses-backfile flags) (:deposits-resource-links-backfile flags))
                          (and (:deposits-licenses-current flags) (:deposits-resource-links-current flags)))))
-    :fields [["&#8612; Back-deposits"
+    :fields [["&#8612; Back file deposits"
                 [[:coverage :licenses-backfile] "Licenses"]
                 [[:coverage :resource-links-backfile] "Full text links"]]
              ["&#8614; Current deposits"
@@ -54,7 +55,7 @@
                      (or (:deposits-orcids-backfile flags)
                          (:deposits-orcids-current flags))))
     
-    :fields [["&#8612; Back-deposits"
+    :fields [["&#8612; Back file deposits"
                 [[:coverage :orcids-backfile] "ORCID Author Deposits"]]
              ["&#8614; Current deposits"
                 [[:coverage :orcids-current] "ORCID Author Deposits"]]]}
@@ -70,7 +71,7 @@
                      (or (:deposits-funders-backfile flags)
                          (:deposits-funders-current flags))))
     
-    :fields [["&#8612; Back-deposits"
+    :fields [["&#8612; Back file deposits"
                 [[:coverage :orcids-backfile] "Funding Information"]]
              ["&#8614; Current deposits"
                 [[:coverage :orcids-current] "Funding Information"]]]}])
@@ -156,14 +157,14 @@
   (reset! features-and-publishers decorated-publishers-for-all-features)))
 
 (defn features-handler []
-  (html (templates/features (:url-prefix @config)
+  (html5 (templates/features (:url-prefix @config)
         (for [feature features]
           (list
             [:h2 [:a {:href (str (:url-prefix @config) "/features/" (name (:name feature)))} (:fullname feature)]] [:p (:description feature)] )))))
 
 (defn template-stars-html 
   [stars]
-  (html (cond
+  (html5 (cond
     (= stars :three-stars) [:span "&#x2605;&#x2605;&#x2605;"]
     (= stars :two-stars) [:span "&#x2605;&#x2605;&#x2606;"] 
     (= stars :one-star) [:span "&#x2605;&#x2606;&#x2606;"]
@@ -172,7 +173,7 @@
 
 (defn member-table-html
   [member-feature]
-  (html [:table
+  (html5 [:table
              (for [column (:feature-data member-feature)]
                (list [:tr [:td {:class :feature-time-period} (first column)]
                           (for [label-value-pairs (rest column)]
@@ -184,7 +185,7 @@
         publishers-decorated @features-and-publishers
         publisher-for-feature (get publishers-decorated feature-name)]
           
-      (html (templates/feature (:url-prefix @config)
+      (html5 (templates/feature (:url-prefix @config)
               (:fullname feature)
               (:description feature)
               (for [publisher publisher-for-feature]
@@ -201,7 +202,7 @@
         publisher-data (-> response-json :message)
         publisher-per-feature (map #(decorate-publisher-feature % publisher-data) features)]
 
-        (html (templates/member (:url-prefix @config) (:primary-name publisher-data)
+        (html5 (templates/member (:url-prefix @config) (:primary-name publisher-data)
           (for [publisher-feature publisher-per-feature]
            (list 
              [:h2 (-> publisher-feature :feature :fullname)]
