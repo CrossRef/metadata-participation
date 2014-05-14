@@ -1,4 +1,4 @@
-]# CrossRef Metadata Participation
+# CrossRef Metadata Participation
 
 A dashboard to show which publishers deposit which metadata.
 
