@@ -32,7 +32,7 @@
 (def features
   [{:name :tdm
     :fullname "Text and Data Mining"
-    :description "When publishers deposit full-text links and license information researchers can access the full-text of publications to perform Text and Data Mining."
+    :description "When publishers deposit full-text links and license information, researchers with the appropriate permissions and license can access the full-text of publications to perform Text and Data Mining."
     :sort-by (fn [publisher] (max
                                (+ (-> publisher :coverage :licenses-backfile) (-> publisher :coverage :resource-links-backfile))
                                (+ (-> publisher :coverage :licenses-current) (-> publisher :coverage :resource-links-current))))
